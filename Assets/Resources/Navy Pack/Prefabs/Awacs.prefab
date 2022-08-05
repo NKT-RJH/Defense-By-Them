@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 5682040096812248282}
   - component: {fileID: 3711440953476257516}
   - component: {fileID: 6970770169568291349}
-  - component: {fileID: -6399919337702798095}
   m_Layer: 7
   m_Name: Awacs
   m_TagString: Enemy
@@ -87,17 +86,3 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &-6399919337702798095
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8683486014554234569}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_Enabled: 1
-  serializedVersion: 4
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 7241036918137702786, guid: ab6066cb297b97442a6b18379204db4e, type: 3}

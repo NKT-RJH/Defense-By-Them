@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 5614202792729141302}
   - component: {fileID: 3509044144455506432}
   - component: {fileID: 7173715673114519289}
-  - component: {fileID: 5445843811206511792}
   m_Layer: 7
   m_Name: F35
   m_TagString: Enemy
@@ -89,20 +88,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &5445843811206511792
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8913466340421308965}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_Enabled: 1
-  serializedVersion: 4
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: -4500790672820164825, guid: a1a74ddd5a4165744bd89f3ebc7f4230, type: 3}
 --- !u!1001 &5290319300805839769
 PrefabInstance:
   m_ObjectHideFlags: 0
