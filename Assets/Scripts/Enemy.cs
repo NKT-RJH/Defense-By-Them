@@ -6,28 +6,42 @@ public class Enemy : MonoBehaviour
 {
 	[Range(1, 4)] public int number;
 
-	private int HP;
-	private int price;
+	public int HP;
+	public int gold;
+
+	public bool deathByPoint = false;
+
+	public float movementspeed;
+	public Vector3 direction;
+
+	public int wayPointIndex;
+
+	private List<Transform> pointList;
 
 	private void Start()
 	{
+		WayPoints wayPoints = FindObjectOfType<WayPoints>();
+		pointList = Random.Range(0, 2) == 0 ? wayPoints.turnOne : wayPoints.turnTwo;
+		//pointList = wayPoints.turnOne;
+		wayPointIndex = 0;
+
 		switch (number)
 		{
 			case 1:
 				HP = 5;
-				price = 3;
+				gold = 3;
 				break;
 			case 2:
 				HP = 15;
-				price = 10;
+				gold = 10;
 				break;
 			case 3:
 				HP = 10;
-				price = 15;
+				gold = 15;
 				break;
 			case 4:
 				HP = 15;
-				price = 20;
+				gold = 20;
 				break;
 		}
 		StartCoroutine(DeathCheck());
@@ -35,7 +49,26 @@ public class Enemy : MonoBehaviour
 
 	private void Update()
 	{
-		
+		//방향 지정 (최우선연산)
+		direction = pointList[wayPointIndex].position - transform.position;
+
+		//이동
+		transform.position = Vector3.MoveTowards(transform.position, pointList[wayPointIndex].position, movementspeed * Time.deltaTime);
+
+
+		//회전
+		/// 내일 물어봐서 고치기!!!!
+		transform.rotation = Quaternion.LookRotation(direction, new Vector3(0, 0, 0));
+
+		//waypoint 도달 시 다음 waypoint 탐색
+		if (Vector3.Distance(pointList[wayPointIndex].position, transform.position) <= 0.01f)
+		{
+			transform.position = pointList[wayPointIndex].position;
+			if (pointList.Count - 1 > wayPointIndex)
+			{
+				wayPointIndex++;
+			}
+		}
 	}
 
 	private IEnumerator DeathCheck()
@@ -45,15 +78,28 @@ public class Enemy : MonoBehaviour
 			yield return null;
 		}
 
-		switch (number)
+		if (!deathByPoint)
 		{
-			case 3:
-				
-				break;
-			case 4:
-				HP = 15;
-				price = 20;
-				break;
+			FindObjectOfType<GameManager>().gold += gold;
+			switch (number)
+			{
+				case 3:
+					FindObjectOfType<ItemManager>().GetItemByEnemy();
+					break;
+				case 4:
+					transform.GetChild(0).gameObject.SetActive(true);
+					yield return new WaitForSeconds(0.1f);
+					break;
+			}
+		}
+		DestroyImmediate(gameObject);
+	}
+
+	private void OnTriggerEnter(Collider other)
+	{
+		if (other.CompareTag("Enemy"))
+		{
+			HP -= 3;
 		}
 	}
 }
