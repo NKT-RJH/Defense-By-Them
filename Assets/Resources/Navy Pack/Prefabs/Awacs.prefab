@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 7573864194752576736}
   m_Layer: 7
   m_Name: Boom
-  m_TagString: Enemy
+  m_TagString: Bomber
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -179,6 +179,7 @@ MonoBehaviour:
   number: 4
   HP: 0
   gold: 0
+  isSlow: 0
   deathByPoint: 0
   movementspeed: 1
   direction: {x: 0, y: 0, z: 0}

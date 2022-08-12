@@ -9,6 +9,7 @@ public class Enemy : MonoBehaviour
 	public int HP;
 	public int gold;
 
+	public bool itemSlow = false;
 	public bool deathByPoint = false;
 
 	public float movementspeed;
@@ -22,7 +23,6 @@ public class Enemy : MonoBehaviour
 	{
 		WayPoints wayPoints = FindObjectOfType<WayPoints>();
 		pointList = Random.Range(0, 2) == 0 ? wayPoints.turnOne : wayPoints.turnTwo;
-		//pointList = wayPoints.turnOne;
 		wayPointIndex = 0;
 
 		switch (number)
@@ -49,6 +49,11 @@ public class Enemy : MonoBehaviour
 
 	private void Update()
 	{
+		if (number == 3)
+		{
+			transform.GetChild(0).gameObject.SetActive(!transform.GetChild(0).gameObject.activeSelf);
+		}
+
 		//방향 지정 (최우선연산)
 		direction = pointList[wayPointIndex].position - transform.position;
 
@@ -92,14 +97,32 @@ public class Enemy : MonoBehaviour
 					break;
 			}
 		}
-		DestroyImmediate(gameObject);
+		Destroy(gameObject);
 	}
+
+	public IEnumerator Slow(int slow, float time)
+	{
+		movementspeed *= (100 - slow) / 100f;
+		yield return new WaitForSeconds(time);
+	} 
 
 	private void OnTriggerEnter(Collider other)
 	{
-		if (other.CompareTag("Enemy"))
+		if (other.CompareTag("Bomber"))
 		{
 			HP -= 3;
+		}
+		if (other.CompareTag("Speeder"))
+		{
+			movementspeed = itemSlow ? 0.65f : 1.3f;
+		}
+	}
+
+	private void OnTriggerExit(Collider other)
+	{
+		if (other.CompareTag("Speeder"))
+		{
+			movementspeed = itemSlow ? 0.5f : 1f;
 		}
 	}
 }

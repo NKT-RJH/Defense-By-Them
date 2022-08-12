@@ -18,7 +18,7 @@ public class Faster : MonoBehaviour
 	{
 		if (!text) return;
 
-		faster += faster < 3 ? 1 : -2;
+		faster += faster < 2 ? 1 : -1;
 		Time.timeScale = faster;
 
 		text.text = string.Format("x{0}", faster);

@@ -51,7 +51,25 @@ public class ItemManager : MonoBehaviour
 		if (gameManager.gold < itemPrice) return;
 		if (buyCount <= 0) return;
 		gameManager.gold -= itemPrice;
-		items[Random.Range(0,4)]++;
+		
+		int random = Random.Range(1, 101);
+		if (random <= 15)
+		{
+			items[0]++;
+		}
+		else if(random<=40)
+		{
+			items[1]++;
+		}
+		else if(random<=70)
+		{
+			items[2]++;
+		}
+		else if(random<=100)
+		{
+			items[3]++;
+		}
+		
 		for (int count = 0; count < itemTexts.Length; count++)
 		{
 			itemTexts[count].text = string.Format("{0}°³", items[count]);
@@ -139,6 +157,7 @@ public class ItemManager : MonoBehaviour
 			{
 				Enemy temporary = enemy.GetComponent<Enemy>();
 				temporary.movementspeed /= 2;
+				temporary.itemSlow = true;
 			}
 			catch (MissingReferenceException) { }
 		}
@@ -149,6 +168,7 @@ public class ItemManager : MonoBehaviour
 			{
 				Enemy temporary = enemy.GetComponent<Enemy>();
 				temporary.movementspeed *= 2;
+				temporary.itemSlow = false;
 			}
 			catch (MissingReferenceException) { }
 		}
