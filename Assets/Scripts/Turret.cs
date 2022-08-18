@@ -61,6 +61,7 @@ public class Turret : MonoBehaviour
 					StartCoroutine(Two());
 					break;
 				case 3:
+					print("공격 준비");
 					StartCoroutine(Three());
 					break;
 				case 4:
@@ -185,8 +186,10 @@ public class Turret : MonoBehaviour
 				if (Vector3.Distance(transform.position, enemyManager.enemys[count].transform.position) <= 4f)
 				{
 					Vector3 mainTarget = enemyManager.enemys[count].transform.position;
+					print("타겟 인식함");
 					for (int count1 = 0; count1 < enemyManager.enemys.Count; count1++)
 					{
+						print("범위 : " + Vector3.Distance(mainTarget, enemyManager.enemys[count1].transform.position));
 						if (Vector3.Distance(mainTarget, enemyManager.enemys[count1].transform.position) > range) continue;
 						targets.Add(enemyManager.enemys[count1].transform);
 						find = true;
@@ -198,13 +201,13 @@ public class Turret : MonoBehaviour
 		}
 
 		if (!find) yield break;
-
+		print("공격 개시");
 		Queue<GameObject> objects = new Queue<GameObject>();
 		for (int count = 0; count < targets.Count; count++)
 		{
 			Enemy enemy = targets[count].GetComponent<Enemy>();
 			enemy.HP -= damage;
-			enemy.Slow(5, slow);
+			StartCoroutine(enemy.Slow(5, slow));
 			objects.Enqueue(Instantiate(particle, targets[count].position, Quaternion.identity));
 		}
 		transform.GetChild(0).gameObject.SetActive(true);
