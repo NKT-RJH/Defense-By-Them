@@ -4,21 +4,33 @@ using UnityEngine;
 
 public class Turret : MonoBehaviour
 {
+	public int number;
+	public int level = 1;
+
+	private int damage = 0;
+	private float delay = 0;
+	private float range = 0;
+	private float slow = 0;
+	private int target = 1;
+
+	private float countTime = 0f;
+
 	public GameObject particle;
-	private EnemyManager enemyManager;
-	[Range(1, 4)] public int number;
+	private GameObject boomParticle;
+	public AudioClip sound;
 
-	public int level = 0;
-	private int damage;
-	private float delay;
-	private float range;
-	private int slow;
+	private EnemySpawner enemySpawner;
+	private AudioSource audioSource;
 
-	private float delayCount;
+	private Transform mainTransform;
+	private Transform watch = null;
 
 	private void Start()
 	{
-		enemyManager = FindObjectOfType<EnemyManager>();
+		enemySpawner = FindObjectOfType<EnemySpawner>();
+		audioSource = FindObjectOfType<AudioSource>();
+		mainTransform = transform.parent;
+		boomParticle = transform.Find("Boom").gameObject;
 
 		switch (number)
 		{
@@ -35,38 +47,128 @@ public class Turret : MonoBehaviour
 				damage = 3;
 				delay = 1;
 				range = 2.5f;
-				slow = 10;
+				slow = 0.2f;
 				break;
 			case 4:
 				damage = 2;
 				delay = 2;
+				target = 3;
 				break;
 		}
 	}
 
 	private void Update()
 	{
-		delayCount += Time.deltaTime;
-
-		if (delayCount >= delay)
+		if (number <= 2)
 		{
-			delayCount = 0;
-
-			switch (number)
+			if (watch)
 			{
-				case 1:
-					StartCoroutine(One());
-					break;
-				case 2:
-					StartCoroutine(Two());
-					break;
-				case 3:
-					print("공격 준비");
-					StartCoroutine(Three());
-					break;
-				case 4:
-					//StartCoroutine(Four());
-					break;
+				transform.LookAt(watch);
+				if (Vector3.Distance(mainTransform.position, watch.position) > 6f)
+				{
+					watch = null;
+				}
+			}
+		}
+
+		countTime += Time.deltaTime;
+
+		if (countTime < delay) return;
+		
+		countTime = 0f;
+
+		FindTarget();
+	}
+
+	private void FindTarget()
+	{
+		Queue<Enemy> targets = new Queue<Enemy>(target);
+		foreach (Transform target in enemySpawner.enemys)
+		{
+			if (Vector3.Distance(mainTransform.position, target.position) <= 6f)
+			{
+				targets.Enqueue(target.GetChild(0).GetComponent<Enemy>());
+			}
+		}
+		if (targets.Count <= 0) return;
+
+		watch = targets.Peek().transform;
+
+		for(int count = 0; count < target; count++)
+		{
+			if (range > 0)
+			{
+				StartCoroutine(BoomAttack(targets.Dequeue()));
+			}
+			else
+			{
+				StartCoroutine(Attack(targets.Dequeue()));
+			}
+
+			if (targets.Count <= 0) break;
+		}
+	}
+
+	private IEnumerator Attack(Enemy target)
+	{
+		// 이펙트 생성
+		GameObject game = Instantiate(particle, target.transform);
+		boomParticle.SetActive(true);
+		target.hp -= damage;
+		audioSource.PlayOneShot(sound);
+		yield return new WaitForSeconds(0.3f);
+		// 이펙트 삭제
+		boomParticle.SetActive(false);
+		Destroy(game);
+	}
+
+	private IEnumerator BoomAttack(Enemy target)
+	{
+		// 이펙트 생성
+		GameObject game = Instantiate(particle);
+		game.transform.position += target.transform.position;
+		boomParticle.SetActive(true);
+		List<Enemy> targets = new List<Enemy>();
+
+		foreach(Transform temporary in enemySpawner.enemys)
+		{
+			if (Vector3.Distance(target.transform.position, temporary.position) <= range)
+			{
+				targets.Add(temporary.GetChild(0).GetComponent<Enemy>());
+			}
+		}
+
+		foreach(Enemy temporary in targets)
+		{
+			if (slow > 0)
+			{
+				if (!temporary.slow)
+				{
+					temporary.speed *= 1 - slow;
+					temporary.slow = true;
+				}
+			}
+
+			temporary.hp -= damage;
+		}
+
+		audioSource.PlayOneShot(sound);
+		yield return new WaitForSeconds(0.3f);
+
+		boomParticle.SetActive(false);
+		Destroy(game);
+		// 이펙트 삭제
+
+		if (slow <= 0) yield break;
+
+		yield return new WaitForSeconds(4.7f);
+
+		foreach (Enemy temporary in targets)
+		{
+			if (temporary.slow)
+			{
+				temporary.speed *= 1 + slow;
+				temporary.slow = false;
 			}
 		}
 	}
@@ -74,7 +176,6 @@ public class Turret : MonoBehaviour
 	public void LevelUp()
 	{
 		level++;
-
 		switch (number)
 		{
 			case 1:
@@ -82,147 +183,22 @@ public class Turret : MonoBehaviour
 				delay -= 0.5f;
 				break;
 			case 2:
-				damage += 2;
+				damage += level == 3 ? 1 : 2;
+				delay -= level == 3 ? 1 : 0;
 				range += 0.5f;
-				if (level == 2)
-				{
-					delay -= 1;
-				}
 				break;
 			case 3:
-				slow += 10;
-				if (level == 2)
-				{
-					slow += 10;
-				}
+				slow += level == 3 ? 0.2f : 0.1f;
 				break;
 			case 4:
 				damage += 1;
+				target += level == 3 ? 4 : 3;
 				break;
 		}
 	}
 
-	private IEnumerator One()
+	public MeshFilter GetBodyMeshFilter()
 	{
-		int count;
-		bool find = false;
-		for (count = 0; count < enemyManager.enemys.Count; count++)
-		{
-			try
-			{
-				if (Vector3.Distance(transform.position, enemyManager.enemys[count].transform.position) < 4f)
-				{
-					find = true;
-					break;
-				}
-			}
-			catch (MissingReferenceException) { }
-		}
-
-		if (!find) yield break;
-
-		Transform target = enemyManager.enemys[count].transform;
-
-		transform.GetChild(0).gameObject.SetActive(true);
-		target.GetComponent<Enemy>().HP -= damage;
-		GameObject particleObject = Instantiate(particle, target.position, Quaternion.identity);
-
-		yield return new WaitForSeconds(0.3f);
-
-		Destroy(particleObject);
-		transform.GetChild(0).gameObject.SetActive(false);
-	}
-
-	private IEnumerator Two()
-	{// 이거 공격 바꾸기!
-		List<Transform> targets = new List<Transform>();
-		bool find = false;
-		for (int count = 0; count < enemyManager.enemys.Count; count++)
-		{
-			try
-			{
-				if (Vector3.Distance(transform.position, enemyManager.enemys[count].transform.position) <= 4f)
-				{
-					Vector3 mainTarget = enemyManager.enemys[count].transform.position;
-					for (int count1 = 0; count1 < enemyManager.enemys.Count; count1++)
-					{
-						if (Vector3.Distance(mainTarget, enemyManager.enemys[count1].transform.position) > range) continue;
-						targets.Add(enemyManager.enemys[count1].transform);
-						find = true;
-					}
-					break;
-				}
-			}
-			catch (MissingReferenceException) { }
-		}
-
-		if (!find) yield break;
-
-		Queue<GameObject> objects = new Queue<GameObject>();
-		for (int count = 0; count < targets.Count; count++)
-		{
-			targets[count].GetComponent<Enemy>().HP -= damage;
-			objects.Enqueue(Instantiate(particle, targets[count].position, Quaternion.identity));
-		}
-		transform.GetChild(0).gameObject.SetActive(true);
-
-		yield return new WaitForSeconds(0.3f);
-
-		for (int count = 0; count < targets.Count; count++)
-		{
-			Destroy(objects.Dequeue());
-		}
-		transform.GetChild(0).gameObject.SetActive(false);
-	}
-
-	private IEnumerator Three()
-	{
-		List<Transform> targets = new List<Transform>();
-		bool find = false;
-		for (int count = 0; count < enemyManager.enemys.Count; count++)
-		{
-			try
-			{
-				if (Vector3.Distance(transform.position, enemyManager.enemys[count].transform.position) <= 4f)
-				{
-					Vector3 mainTarget = enemyManager.enemys[count].transform.position;
-					print("타겟 인식함");
-					for (int count1 = 0; count1 < enemyManager.enemys.Count; count1++)
-					{
-						print("범위 : " + Vector3.Distance(mainTarget, enemyManager.enemys[count1].transform.position));
-						if (Vector3.Distance(mainTarget, enemyManager.enemys[count1].transform.position) > range) continue;
-						targets.Add(enemyManager.enemys[count1].transform);
-						find = true;
-					}
-					break;
-				}
-			}
-			catch (MissingReferenceException) { }
-		}
-
-		if (!find) yield break;
-		print("공격 개시");
-		Queue<GameObject> objects = new Queue<GameObject>();
-		for (int count = 0; count < targets.Count; count++)
-		{
-			Enemy enemy = targets[count].GetComponent<Enemy>();
-			enemy.HP -= damage;
-			StartCoroutine(enemy.Slow(5, slow));
-			objects.Enqueue(Instantiate(particle, targets[count].position, Quaternion.identity));
-		}
-		transform.GetChild(0).gameObject.SetActive(true);
-
-		yield return new WaitForSeconds(0.3f);
-
-		for (int count = 0; count < targets.Count; count++)
-		{
-			Destroy(objects.Dequeue());
-		}
-		transform.GetChild(0).gameObject.SetActive(false);
-	}
-
-	private void Four()
-	{
-		// 이거 완성하기!
+		return transform.GetChild(0).GetComponent<MeshFilter>();
 	}
 }

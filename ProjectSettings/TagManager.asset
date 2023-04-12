@@ -5,17 +5,15 @@ TagManager:
   serializedVersion: 2
   tags:
   - Enemy
-  - Bomber
-  - Speeder
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Road
   - Water
   - UI
-  - Road
   - Enemy
+  - 
   - 
   - 
   - 

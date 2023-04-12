@@ -1,128 +1,166 @@
+using UnityEngine;
+using UnityEngine.UI;
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
 public class Enemy : MonoBehaviour
 {
-	[Range(1, 4)] public int number;
-
-	public int HP;
+	public int code;
+	public int number;
+	public int hp;
 	public int gold;
-
+	public float speed;
+	
+	public bool boost = false;
+	public bool slow = false;
 	public bool itemSlow = false;
-	public bool deathByPoint = false;
+	private int targetNumber = 0;
+	private float maxhp;
 
-	public float movementspeed;
-	public Vector3 direction;
+	public Image hpBar;
+	public GameObject emptyhpBar;
+	public GameObject slowEffect;
+	private GameManager gameManager;
+	private EnemySpawner enemySpawner;
+	private Item item;
+	private List<Vector3> paths = new List<Vector3>();
 
-	public int wayPointIndex;
-
-	private List<Transform> pointList;
+	private Transform mainTransform;
 
 	private void Start()
 	{
-		WayPoints wayPoints = FindObjectOfType<WayPoints>();
-		pointList = Random.Range(0, 2) == 0 ? wayPoints.turnOne : wayPoints.turnTwo;
-		wayPointIndex = 0;
-
 		switch (number)
 		{
 			case 1:
-				HP = 5;
+				hp = 5;
 				gold = 3;
+				speed = 1;
 				break;
 			case 2:
-				HP = 15;
+				hp = 15;
 				gold = 10;
+				speed = 1.2f;
 				break;
 			case 3:
-				HP = 10;
+				hp = 10;
 				gold = 15;
+				speed = 1;
+				item = FindObjectOfType<Item>();
 				break;
 			case 4:
-				HP = 15;
+				hp = 15;
 				gold = 20;
+				speed = 0.8f;
 				break;
 		}
-		StartCoroutine(DeathCheck());
+		enemySpawner = FindObjectOfType<EnemySpawner>();
+		gameManager = FindObjectOfType<GameManager>();
+		mainTransform = transform.parent;
+
+		maxhp = hp;
+		
+		Targets targets = FindObjectOfType<Targets>();
+		int random = UnityEngine.Random.Range(1, 101);
+		if (random <= 29 + enemySpawner.stage)
+		{
+			paths = targets.pathTwo;
+		}
+		else if (random <= 100)
+		{
+			paths = targets.pathOne;
+		}
+
+		StartCoroutine(SlowEffect());
 	}
 
 	private void Update()
 	{
-		if (number == 3)
+		if (gameManager.pause) return;
+
+		mainTransform.position = Vector3.MoveTowards(mainTransform.position, paths[targetNumber], speed * Time.deltaTime);
+		transform.LookAt(paths[targetNumber]);
+
+		if (Vector3.Distance(mainTransform.position, paths[targetNumber]) <= 0.1f)
 		{
-			transform.GetChild(0).gameObject.SetActive(!transform.GetChild(0).gameObject.activeSelf);
+			targetNumber++;
 		}
 
-		//방향 지정 (최우선연산)
-		direction = pointList[wayPointIndex].position - transform.position;
-
-		//이동
-		transform.position = Vector3.MoveTowards(transform.position, pointList[wayPointIndex].position, movementspeed * Time.deltaTime);
-
-
-		//회전
-		/// 내일 물어봐서 고치기!!!!
-		transform.rotation = Quaternion.LookRotation(direction, new Vector3(0, 0, 0));
-
-		//waypoint 도달 시 다음 waypoint 탐색
-		if (Vector3.Distance(pointList[wayPointIndex].position, transform.position) <= 0.01f)
+		if (number == 2)
 		{
-			transform.position = pointList[wayPointIndex].position;
-			if (pointList.Count - 1 > wayPointIndex)
-			{
-				wayPointIndex++;
-			}
-		}
-	}
-
-	private IEnumerator DeathCheck()
-	{
-		while (HP > 0)
-		{
-			yield return null;
+			Boost();
 		}
 
-		if (!deathByPoint)
+		if (hp != maxhp)
 		{
-			FindObjectOfType<GameManager>().gold += gold;
+			hpBar.gameObject.SetActive(true);
+			emptyhpBar.SetActive(true);
+
+			hpBar.fillAmount = hp / maxhp;
+		}
+
+		if (hp <= 0)
+		{
 			switch (number)
 			{
 				case 3:
-					FindObjectOfType<ItemManager>().GetItemByEnemy();
+					item.RandomItem();
 					break;
 				case 4:
-					transform.GetChild(0).gameObject.SetActive(true);
-					yield return new WaitForSeconds(0.1f);
+					Boom();
 					break;
 			}
-		}
-		Destroy(gameObject);
-	}
-
-	public IEnumerator Slow(int slow, float time)
-	{
-		movementspeed *= (100 - slow) / 100f;
-		yield return new WaitForSeconds(time);
-	} 
-
-	private void OnTriggerEnter(Collider other)
-	{
-		if (other.CompareTag("Bomber"))
-		{
-			HP -= 3;
-		}
-		if (other.CompareTag("Speeder"))
-		{
-			movementspeed = itemSlow ? 0.65f : 1.3f;
+			gameManager.gold += gold * gameManager.goldPower;
+			enemySpawner.enemys.Remove(mainTransform);
+			Destroy(mainTransform.gameObject);
 		}
 	}
 
-	private void OnTriggerExit(Collider other)
+	private IEnumerator SlowEffect()
 	{
-		if (other.CompareTag("Speeder"))
+		while (true)
 		{
-			movementspeed = itemSlow ? 0.5f : 1f;
+			slowEffect.SetActive(slow || itemSlow);
+			yield return null;
+		}
+	}
+
+	private void Boost()
+	{
+		for (int count = 0; count < enemySpawner.enemys.Count; count++)
+		{
+			try
+			{
+				Enemy enemy = enemySpawner.enemys[count].GetChild(0).GetComponent<Enemy>();
+				if (Vector3.Distance(mainTransform.position, enemySpawner.enemys[count].position) <= 1.5f)
+				{
+					if (enemy.boost) continue;
+					enemy.speed *= 1.3f;
+					enemy.boost = true;
+				}
+				else
+				{
+					if (!enemy.boost) continue;
+					enemy.speed /= 1.3f;
+					enemy.boost = false;
+				}
+			}
+			catch (NullReferenceException) { }
+		}
+	}
+
+	private void Boom()
+	{
+		for (int count = 0; count < enemySpawner.enemys.Count; count++)
+		{
+			try
+			{
+				if (Vector3.Distance(mainTransform.position, enemySpawner.enemys[count].position) <= 1.5f)
+				{
+					enemySpawner.enemys[count].GetChild(0).GetComponent<Enemy>().hp -= 3;
+				}
+			}
+			catch (NullReferenceException) { }
 		}
 	}
 }

@@ -2,13 +2,25 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class CheatKey : MonoBehaviour
 {
 	private Dictionary<KeyCode, Action> actionsByKey = new Dictionary<KeyCode, Action>();
 
+	public GameManager gameManager;
+	public EnemySpawner enemySpawner;
+
+	private bool stopFlag = false;
+
+	private List<KeyValuePair<int, float>> enemys = new List<KeyValuePair<int, float>>();
+
+	private List<Stage> backUpStages = new List<Stage>();
+
 	private void Start()
 	{
+		backUpStages = enemySpawner.stages;
+
 		// 치트키는 F1 에서부터 F7 까지! 일단은 테스트 함수로..,
 		actionsByKey.Add(KeyCode.F1, StopEnemy);
 		actionsByKey.Add(KeyCode.F2, GoldIncrease);
@@ -17,67 +29,114 @@ public class CheatKey : MonoBehaviour
 		actionsByKey.Add(KeyCode.F5, GotoTitle);
 		actionsByKey.Add(KeyCode.F6, GotoFirstStage);
 		actionsByKey.Add(KeyCode.F7, GotoSecondStage);
-
-		StartCoroutine(Repeat());
 	}
 
-	private IEnumerator Repeat()
+	private void Update()
 	{
-		while (true)
+		if (gameManager.gameEnd || gameManager.gameOver || gameManager.pause) return;
+
+		if (!Input.anyKeyDown) return;
+		
+		foreach (KeyValuePair<KeyCode, Action> keyValue in actionsByKey)
 		{
-			if (Input.anyKeyDown)
+			if (Input.GetKeyDown(keyValue.Key))
 			{
-				foreach (KeyValuePair<KeyCode, Action> keyValue in actionsByKey)
-				{
-					if (Input.GetKeyDown(keyValue.Key))
-					{
-						keyValue.Value.Invoke();
-					}
-				}
+				keyValue.Value.Invoke();
 			}
-			yield return null;
 		}
 	}
 
 	private void StopEnemy()
 	{
-		// 모든 적 멈추기
-		print("모든 적 멈추기");
+		if (!stopFlag)
+		{
+			foreach (Transform path in enemySpawner.enemys)
+			{
+				Enemy enemy = path.GetChild(0).GetComponent<Enemy>();
+				enemys.Add(new KeyValuePair<int, float>(enemy.code, enemy.speed));
+				enemy.speed = 0;
+			}
+			stopFlag = true;
+			enemySpawner.rest = true;
+		}
+		else
+		{
+			for (int count = 0; count < enemys.Count; count++)
+			{
+				for (int count1 = 0; count1 < enemySpawner.enemys.Count; count1++)
+				{
+					try
+					{
+						Enemy enemy = enemySpawner.enemys[count1].GetChild(0).GetComponent<Enemy>();
+						if (enemy.code.Equals(enemys[count].Key))
+						{
+							enemy.speed = enemys[count].Value;
+							break;
+						}
+					}
+					catch (NullReferenceException) { }
+				}
+			}
+			enemys = new List<KeyValuePair<int, float>>();
+			stopFlag = false;
+			enemySpawner.rest = false;
+		}
 	}
 
 	private void GoldIncrease()
 	{
-		// 골드 증가 100
-		print("골드 증가 100");
+		gameManager.gold += 100;
 	}
 
 	private void KillAll()
 	{
-		// 모든 적 사망 (골드 획득 X)
-		print("모든 적 사망 (골드 획득 X)");
+		int max = enemySpawner.enemys.Count;
+		for (int count = 0; count < max; count++)
+		{
+			Transform temporary = enemySpawner.enemys[0];
+			enemySpawner.enemys.Remove(temporary);
+			Destroy(temporary.gameObject);
+		}
 	}
 
 	private void KillAll_Gold()
 	{
-		// 모든 적 사망 (골드 획득)
-		print("모든 적 사망 (골드 획득)");
+		foreach (Transform path in enemySpawner.enemys)
+		{
+			path.GetChild(0).GetComponent<Enemy>().hp = 0;
+		}
 	}
 
 	private void GotoTitle()
 	{
-		// 메인화면으로
-		print("메인화면으로");
+		SceneManager.LoadScene("Title");
 	}
 
 	private void GotoFirstStage()
 	{
-		// 1스테이지로 전환
-		print("1스테이지로 전환");
+		KillAll();
+		enemySpawner.stages = backUpStages;
+		enemySpawner.code = 0;
+		enemySpawner.stage = 0;
+		enemySpawner.faze = 0;
+		enemySpawner.restTime = enemySpawner.stages[enemySpawner.stage].restTime;
+		enemySpawner.leastTime = enemySpawner.stages[enemySpawner.stage].fazes[enemySpawner.faze].fazeTime;
+		enemySpawner.spawnTime = 0;
+
+		enemySpawner.stageText.text = string.Format("Stage {0}", enemySpawner.stage + 1);
 	}
 
 	private void GotoSecondStage()
 	{
-		// 2스테이지로 전환
-		print("2스테이지로 전환");
+		KillAll();
+		enemySpawner.stages = backUpStages;
+		enemySpawner.stage = 1;
+		enemySpawner.faze = 0;
+		enemySpawner.restTime = enemySpawner.stages[enemySpawner.stage].restTime;
+		enemySpawner.leastTime = enemySpawner.stages[enemySpawner.stage].fazes[enemySpawner.faze].fazeTime;
+		enemySpawner.spawnTime = 0;
+		enemySpawner.code = 0;
+
+		enemySpawner.stageText.text = string.Format("Stage {0}", enemySpawner.stage + 1);
 	}
 }

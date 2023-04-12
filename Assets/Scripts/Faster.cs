@@ -1,26 +1,25 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class Faster : MonoBehaviour
 {
-	public Text text;
-
 	private int faster = 1;
 
-	private void Awake()
+	private Text text;
+
+	private void Start()
 	{
-		Time.timeScale = faster;
+		text = transform.Find("Text").GetComponent<Text>();
 	}
 
-	public void SetFaster()
+	private void Update()
 	{
-		if (!text) return;
+		text.text = string.Format("X{0}", faster);
+	}
 
+	public void Onclick()
+	{
 		faster += faster < 2 ? 1 : -1;
 		Time.timeScale = faster;
-
-		text.text = string.Format("x{0}", faster);
 	}
 }
